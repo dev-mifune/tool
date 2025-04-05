@@ -1,0 +1,55 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}{{ task.title }} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>タスク詳細</h1>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'task_update' task.pk %}" class="btn btn-primary">編集</a>
+        <a href="{% url 'task_delete' task.pk %}" class="btn btn-danger">削除</a>
+        <a href="{% url 'task_list' %}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2>{{ task.title }}</h2>
+    </div>
+    <div class="card-body">
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <p><strong>カテゴリ:</strong> {{ task.category.name }}</p>
+                <p>
+                    <strong>ステータス:</strong> 
+                    {% if task.status == 'not_started' %}
+                        <span class="badge bg-danger">未着手</span>
+                    {% elif task.status == 'in_progress' %}
+                        <span class="badge bg-warning text-dark">進行中</span>
+                    {% elif task.status == 'completed' %}
+                        <span class="badge bg-success">完了</span>
+                    {% endif %}
+                </p>
+                <p><strong>期限日:</strong> {{ task.due_date|default:"設定なし" }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>作成日:</strong> {{ task.created_at|date:"Y/m/d H:i" }}</p>
+                <p><strong>更新日:</strong> {{ task.updated_at|date:"Y/m/d H:i" }}</p>
+            </div>
+        </div>
+        
+        <h3>詳細</h3>
+        <div class="card">
+            <div class="card-body">
+                {% if task.description %}
+                    <p class="white-space: pre-line">{{ task.description }}</p>
+                {% else %}
+                    <p class="text-muted">詳細はありません</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}タスク一覧 | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>タスク一覧</h1>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'task_create' %}" class="btn btn-primary">新規タスク作成</a>
+    </div>
+</div>
+
+{% if tasks %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>タイトル</th>
+                    <th>カテゴリ</th>
+                    <th>ステータス</th>
+                    <th>期限日</th>
+                    <th>作成日</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for task in tasks %}
+                <tr class="task-status-{{ task.status }}">
+                    <td>
+                        <a href="{% url 'task_detail' task.pk %}">{{ task.title }}</a>
+                    </td>
+                    <td>{{ task.category.name }}</td>
+                    <td>
+                        {% if task.status == 'not_started' %}
+                            <span class="badge bg-danger">未着手</span>
+                        {% elif task.status == 'in_progress' %}
+                            <span class="badge bg-warning text-dark">進行中</span>
+                        {% elif task.status == 'completed' %}
+                            <span class="badge bg-success">完了</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ task.due_date|default:"なし" }}</td>
+                    <td>{{ task.created_at|date:"Y/m/d H:i" }}</td>
+                    <td>
+                        <a href="{% url 'task_update' task.pk %}" class="btn btn-sm btn-outline-primary">編集</a>
+                        <a href="{% url 'task_delete' task.pk %}" class="btn btn-sm btn-outline-danger">削除</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p class="alert alert-info">タスクがありません。新しいタスクを作成してください。</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,89 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}
+    {% if task %}タスク編集 | {{ block.super }}{% else %}新規タスク作成 | {{ block.super }}{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>{% if task %}タスク編集{% else %}新規タスク作成{% endif %}</h1>
+    </div>
+    <div class="col-auto">
+        <a href="{% url 'task_list' %}" class="btn btn-secondary">一覧に戻る</a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="title" class="form-label">タイトル</label>
+                <input type="text" class="form-control" id="title" name="title" required 
+                    value="{% if task %}{{ task.title }}{% endif %}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="category" class="form-label">カテゴリ</label>
+                <select class="form-select" id="category" name="category" required>
+                    <option value="" disabled {% if not task %}selected{% endif %}>選択してください</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" 
+                            {% if task and task.category.id == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="status" class="form-label">ステータス</label>
+                <select class="form-select" id="status" name="status" required>
+                    <option value="not_started" {% if task and task.status == 'not_started' %}selected{% endif %}>未着手</option>
+                    <option value="in_progress" {% if task and task.status == 'in_progress' %}selected{% endif %}>進行中</option>
+                    <option value="completed" {% if task and task.status == 'completed' %}selected{% endif %}>完了</option>
+                </select>
+            </div>
+            
+            <div class="mb-3">
+                <label for="due_date" class="form-label">期限日</label>
+                <input type="date" class="form-control date-picker" id="due_date" name="due_date" 
+                    value="{% if task and task.due_date %}{{ task.due_date|date:'Y-m-d' }}{% endif %}">
+            </div>
+            
+            <div class="mb-3">
+                <label for="description" class="form-label">詳細</label>
+                <textarea class="form-control" id="description" name="description" rows="5">{% if task %}{{ task.description }}{% endif %}</textarea>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary">
+                    {% if task %}保存{% else %}作成{% endif %}
+                </button>
+                <a href="{% if task %}{% url 'task_detail' task.pk %}{% else %}{% url 'task_list' %}{% endif %}" 
+                    class="btn btn-outline-secondary">キャンセル</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/ja.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        flatpickr(".date-picker", {
+            locale: "ja",
+            dateFormat: "Y-m-d",
+            allowInput: true
+        });
+    });
+</script>
+{% endblock %}

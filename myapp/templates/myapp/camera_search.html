@@ -1,0 +1,211 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}カメラ検索ツール{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">カメラ横断検索</h1>
+    
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">検索条件</h5>
+            <form id="searchForm" class="mb-3">
+                <div class="form-group">
+                    <label for="keyword">キーワード</label>
+                    <input type="text" class="form-control" id="keyword" name="keyword" placeholder="例: Canon 5D Mark IV">
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">検索</button>
+                <div class="mt-2">
+                    <small class="text-muted">※ 検索対象: チャンプカメラ、カメラのキタムラ、J-Camera</small>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="searchResults" class="mb-4" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>検索結果 <span id="resultCount" class="badge bg-secondary">0</span></h2>
+            <div>
+                <a href="#" id="exportCsv" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-download"></i> CSVエクスポート
+                </a>
+            </div>
+        </div>
+        
+        <div class="btn-group mb-3">
+            <button type="button" class="btn btn-outline-primary btn-sm" data-filter="all">すべて</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-filter="ChampCameraScraper">チャンプカメラ</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-filter="KitamuraScraper">カメラのキタムラ</button>
+            <button type="button" class="btn btn-outline-primary btn-sm" data-filter="JCameraScraper">J-Camera</button>
+        </div>
+        
+        <div id="resultsContainer">
+            <!-- 検索結果がここに表示されます -->
+            <div class="text-center py-5" id="loading" style="display:none;">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">検索中...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchForm = document.getElementById('searchForm');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const searchResults = document.getElementById('searchResults');
+        const resultCount = document.getElementById('resultCount');
+        const loading = document.getElementById('loading');
+        const exportCsv = document.getElementById('exportCsv');
+        let currentKeyword = '';
+        
+        // 検索フォーム送信
+        searchForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const keyword = document.getElementById('keyword').value.trim();
+            
+            if (keyword) {
+                currentKeyword = keyword;
+                searchResults.style.display = 'block';
+                loading.style.display = 'block';
+                resultsContainer.innerHTML = '';
+                
+                // APIリクエスト
+                fetch('/api/search/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        keyword: keyword
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(errorData => {
+                            throw new Error(errorData.error || 'サーバーエラー');
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loading.style.display = 'none';
+                    resultCount.textContent = data.results.length;
+                    
+                    // 結果を表示
+                    if (data.results.length > 0) {
+                        displayResults(data.results);
+                    } else {
+                        resultsContainer.innerHTML = '<div class="alert alert-info">検索結果がありませんでした。</div>';
+                    }
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    resultsContainer.innerHTML = `<div class="alert alert-danger">エラーが発生しました: ${error.message}</div>`;
+                    console.error('Error:', error);
+                });
+                
+                // CSVエクスポートリンクを更新
+                exportCsv.href = `/export-csv/?keyword=${encodeURIComponent(keyword)}`;
+            }
+        });
+        
+        // 結果を表示する関数
+        function displayResults(results) {
+            const table = document.createElement('table');
+            table.className = 'table table-striped table-hover';
+            
+            // テーブルヘッダー
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th scope="col">画像</th>
+                    <th scope="col">商品名</th>
+                    <th scope="col">価格</th>
+                    <th scope="col">状態</th>
+                    <th scope="col">サイト</th>
+                    <th scope="col"></th>
+                </tr>
+            `;
+            table.appendChild(thead);
+            
+            // テーブルボディ
+            const tbody = document.createElement('tbody');
+            results.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.dataset.source = item.source;
+                
+                tr.innerHTML = `
+                    <td style="width: 100px;">
+                        <img src="${item.image_url || '/static/images/no-image.png'}" 
+                             alt="${item.title}" class="img-thumbnail" style="max-width: 80px; max-height: 80px;">
+                    </td>
+                    <td>${item.title}</td>
+                    <td>¥${item.price.toLocaleString()}</td>
+                    <td>${item.condition || '---'}</td>
+                    <td>${formatSource(item.source)}</td>
+                    <td>
+                        <a href="${item.product_url}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            詳細を見る
+                        </a>
+                    </td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+            
+            table.appendChild(tbody);
+            resultsContainer.innerHTML = '';
+            resultsContainer.appendChild(table);
+            
+            // フィルタリングボタンのイベントリスナーを設定
+            document.querySelectorAll('.btn-group button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const filter = this.dataset.filter;
+                    filterResults(filter);
+                    
+                    // アクティブクラスの切り替え
+                    document.querySelectorAll('.btn-group button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                });
+            });
+        }
+        
+        // サイト名を表示用にフォーマット
+        function formatSource(source) {
+            switch(source) {
+                case 'ChampCameraScraper':
+                    return 'チャンプカメラ';
+                case 'KitamuraScraper':
+                    return 'カメラのキタムラ';
+                case 'JCameraScraper':
+                    return 'J-Camera';
+                default:
+                    return source;
+            }
+        }
+        
+        // 結果をフィルタリング
+        function filterResults(filter) {
+            const rows = document.querySelectorAll('#resultsContainer tbody tr');
+            rows.forEach(row => {
+                if (filter === 'all' || row.dataset.source === filter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // 表示されている行の数を更新
+            const visibleRows = document.querySelectorAll('#resultsContainer tbody tr:not([style*="display: none"])').length;
+            resultCount.textContent = visibleRows;
+        }
+    });
+</script>
+{% endblock %}

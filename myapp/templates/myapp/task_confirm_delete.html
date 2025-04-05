@@ -1,0 +1,41 @@
+{% extends 'myapp/base.html' %}
+
+{% block title %}タスク削除 | {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1>タスク削除</h1>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <p class="alert alert-danger">以下のタスクを削除してもよろしいですか？</p>
+        
+        <div class="mb-4">
+            <h2>{{ task.title }}</h2>
+            <p><strong>カテゴリ:</strong> {{ task.category.name }}</p>
+            <p>
+                <strong>ステータス:</strong> 
+                {% if task.status == 'not_started' %}
+                    <span class="badge bg-danger">未着手</span>
+                {% elif task.status == 'in_progress' %}
+                    <span class="badge bg-warning text-dark">進行中</span>
+                {% elif task.status == 'completed' %}
+                    <span class="badge bg-success">完了</span>
+                {% endif %}
+            </p>
+            <p><strong>期限日:</strong> {{ task.due_date|default:"設定なし" }}</p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-danger">削除する</button>
+                <a href="{% url 'task_detail' task.pk %}" class="btn btn-outline-secondary">キャンセル</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
